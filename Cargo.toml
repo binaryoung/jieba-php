@@ -1,0 +1,15 @@
+[package]
+name = "jieba-php"
+version = "0.1.0"
+authors = ["young <me@xiayang.me>"]
+edition = "2018"
+
+[dependencies]
+jieba-rs = { version = "0.5", features = ["textrank", "tfidf"], default-features = false }
+c_fixed_string = "0.2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[build-dependencies]
+cbindgen = "0.14"

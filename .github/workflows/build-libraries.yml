@@ -1,0 +1,68 @@
+on:
+  push:
+    paths:
+      - "src/lib.rs"
+      - "Cargo.toml"
+
+name: build libraries
+
+jobs:
+  build-linux-windows:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            library_name: libjieba_php.so
+          - target: x86_64-pc-windows-gnu
+            library_name: jieba_php.dll
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --release --target=${{ matrix.target }}
+      - name: Strip library
+        run: |
+          strip -s target/${{ matrix.target }}/release/${{ matrix.library_name }}
+      - uses: actions/upload-artifact@v1
+        with:
+          name: lib
+          path: target/${{ matrix.target }}/release/${{ matrix.library_name }}
+
+  build-macos:
+    name: Build x86_64-apple-darwin
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target=x86_64-apple-darwin
+      - uses: actions/upload-artifact@v1
+        with:
+          name: lib
+          path: target/x86_64-apple-darwin/release/libjieba_php.dylib
+
+  create-pull-request:
+    name: Create pull request
+    needs: [build-linux-windows, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v1
+        with:
+          name: lib
+      - uses: peter-evans/create-pull-request@v2
+        with:
+          commit-message: update libraries
+          title: Automated Library Updates
+          body: This is an auto-generated PR with library updates.
